@@ -313,7 +313,7 @@ asio::awaitable<bool> init_gateway(dns::dns_gateway *gateway, config::dns_config
                     }
                 }
 
-                // tls_upstream->keep_alive(upstream.keep_alive);
+                tls_upstream->keep_alive(upstream.keep_alive);
                 tls_upstream->security_verify(upstream.security_verify);
                 tls_upstream->ca_certificate(upstream.ca_certificate);
                 tls_upstream->certificate(upstream.certificate);
@@ -348,6 +348,7 @@ asio::awaitable<bool> init_gateway(dns::dns_gateway *gateway, config::dns_config
                     }
                 }
 
+                https_upstream->keep_alive(upstream.keep_alive);
                 https_upstream->security_verify(upstream.security_verify);
                 https_upstream->ca_certificate(upstream.ca_certificate);
                 https_upstream->certificate(upstream.certificate);

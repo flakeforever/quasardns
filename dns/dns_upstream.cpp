@@ -225,6 +225,11 @@ namespace dns
 
             if (buffer_length > 0)
             {
+                if (!keep_alive_)
+                {
+                    disconnect();
+                }
+
                 dns_buffer response_buffer((uint8_t *)buffer_, buffer_length);
                 uint16_t response_length = response_buffer.read_16bits();
 
@@ -234,6 +239,8 @@ namespace dns
         }
         catch (const std::exception &e)
         {
+            logger.error("send_request error: %s", e.what());
+
             try
             {
                 disconnect();
@@ -335,15 +342,25 @@ namespace dns
         {
             // send dns request
             last_request_time_ = asio::steady_timer::clock_type::now();
-            std::string request = "POST " + path_ + " HTTP/1.1\r\n"
-                                "Host: " + host_ + "\r\n"
-                                "Content-Type: application/dns-message\r\n"
-                                "Connection: keep-alive\r\n"
-                                "Content-Length: " + std::to_string(data_length) + "\r\n"
-                                "\r\n";
+            std::string request_string = "";
+            request_string += "POST " + path_ + " HTTP/1.1\r\n";
+            request_string += "Host: " + host_ + "\r\n";
+            request_string += "Content-Type: application/dns-message\r\n";
 
-            std::size_t request_length = request.length();
-            std::copy(request.begin(), request.end(), buffer_);
+            if (keep_alive_)
+            {
+                request_string += "Connection: keep-alive\r\n";
+            }
+            else
+            {
+                request_string += "Connection: close\r\n";
+            }
+
+            request_string += "Content-Length: " + std::to_string(data_length) + "\r\n";
+            request_string += "\r\n";
+
+            std::size_t request_length = request_string.length();
+            std::copy(request_string.begin(), request_string.end(), buffer_);
             std::copy(data, data + data_length, buffer_ + request_length);
             request_length += data_length;
 
@@ -366,6 +383,11 @@ namespace dns
                 {
                     if (data_length == header.content_length)
                     {
+                        if (!keep_alive_)
+                        {
+                            disconnect();
+                        }
+
                         co_await execute_handler(handler, errc::error_code::no_error, header_end, data_length);
                         co_return true;
                     }

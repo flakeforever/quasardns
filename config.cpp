@@ -135,6 +135,10 @@ namespace config
                                 {
                                     upstream.proxy = upstream_obj["proxy"].get<std::string>();
                                 }
+                                if (upstream_obj.find("keep_alive") != upstream_obj.end() && upstream_obj["keep_alive"].is<bool>())
+                                {
+                                    upstream.keep_alive = upstream_obj["keep_alive"].get<bool>();
+                                }
                                 if (upstream_obj.find("check_enabled") != upstream_obj.end() && upstream_obj["check_enabled"].is<bool>())
                                 {
                                     upstream.check_enabled = upstream_obj["check_enabled"].get<bool>();

@@ -94,6 +94,7 @@ namespace dns
         PROPERTY_READWRITE(std::string, ca_certificate);
         PROPERTY_READWRITE(std::string, certificate);
         PROPERTY_READWRITE(std::string, private_key);
+        PROPERTY_READWRITE(bool, keep_alive);
     };
 
     class dns_tls_upstream : public dns_tls_property, public dns_upstream

@@ -28,7 +28,7 @@ namespace config
         std::string certificate = "";
         std::string private_key = "";
         std::string proxy;
-        // bool keep_alive = false;
+        bool keep_alive = false;
         bool check_enabled = false;
         int check_interval = 0;
     };
