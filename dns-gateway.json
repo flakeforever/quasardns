@@ -24,15 +24,39 @@
       "upstreams": [
         {
           "uri": "doh://1.1.1.1/dns-query",
+          "security_verify": true,
           "proxy": "socks5://192.168.88.1:1080",
-          "keep_alive": true,
           "check_enabled": true,
           "check_interval": 90
         },
         {
-          "uri": "doh://8.8.8.8/dns-query",
+          "uri": "dot://1.1.1.1",
+          "security_verify": true,
           "proxy": "socks5://192.168.88.1:1080",
-          "keep_alive": true,
+          "check_enabled": true,
+          "check_interval": 90
+        },
+        {
+          "uri": "doh://1.1.1.1/dns-query",
+          "security_verify": true,
+          "proxy": "socks5://192.168.88.1:1080",
+          "check_enabled": true,
+          "check_interval": 90
+        },
+        {
+          "uri": "dot://8.8.8.8",
+          "security_verify": true,
+          "proxy": "socks5://192.168.88.1:1080",
+          "check_enabled": true,
+          "check_interval": 90
+        },
+        {
+          "uri": "dot://example:853",
+          "security_verify": true,
+          "ca_certificate": "/etc/dns-gateway/cert/ca.cert",
+          "certificate": "/etc/dns-gateway/cert/example.pem",
+          "private_key": "/etc/dns-gateway/cert/key.pem",
+          "proxy": "socks5://192.168.88.1:1080",
           "check_enabled": true,
           "check_interval": 90
         }
