@@ -562,7 +562,7 @@ namespace socks
                 throw e;
             }
 
-            std::printf("async_send_to: %d to %s:%d\n", data_length, remote_address_.c_str(), remote_port_);
+            // std::printf("async_send_to: %d to %s:%d\n", data_length, remote_address_.c_str(), remote_port_);
             co_return length;
         }
         else
@@ -604,7 +604,7 @@ namespace socks
             recv_buffer_.set_position(0);
             recv_buffer_.read_buffer(data, data_length);
 
-            std::printf("async_receive: %d from %s:%d\n", length, remote_address_.c_str(), remote_port_);
+            // std::printf("async_receive: %d from %s:%d\n", length, remote_address_.c_str(), remote_port_);
             co_return length;
         }
         else
