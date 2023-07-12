@@ -74,7 +74,9 @@ namespace dns
             std::shared_ptr<dns_upstream> dns_upstream, dns::dns_object *dns_object);
         asio::awaitable<void> dns_upstream_close(
             std::shared_ptr<dns_upstream> dns_upstream);
-            
+        asio::awaitable<bool> dns_upstream_check(
+            std::shared_ptr<dns_upstream> dns_upstream, std::string domain);
+
         asio::any_io_executor executor_;
         uint16_t port_;
         asio::ip::udp::socket udp_socket_;
@@ -84,7 +86,8 @@ namespace dns
         dns_router router_;
         dns_statics statics_;
         dns_cache cache_;
-        char buffer_[dns::buffer_size];
+        char recv_buffer_[dns::buffer_size];
+        char check_buffer_[dns::buffer_size];
         int object_id_;
     };
 }

@@ -72,7 +72,7 @@ namespace dns
                 dns::dns_package package;
                 try
                 {
-                    package.parse(buffer_, length);
+                    package.parse(recv_buffer_, length);
                 }
                 catch (const std::exception &e)
                 {
@@ -95,7 +95,7 @@ namespace dns
 
                 // init dns object
                 memset(dns_object->buffer_, 0, sizeof(dns_object->buffer_));
-                memcpy(dns_object->buffer_, buffer_, length);
+                memcpy(dns_object->buffer_, recv_buffer_, length);
                 dns_object->buffer_length_ = length;
 
                 dns_object->question_id_ = package.id();
@@ -110,17 +110,24 @@ namespace dns
                 // define a coroutine for request
                 auto request_coroutine = [&](dns::dns_object *new_object) -> asio::awaitable<void>
                 {
-                    // handle dns static
-                    bool status = co_await handle_dns_static(new_object);
-                    if (!status)
+                    try
                     {
-                        // handle dns cache
-                        status = co_await handle_query_cache(new_object);
+                        // handle dns static
+                        bool status = co_await handle_dns_static(new_object);
                         if (!status)
                         {
-                            // handle dns request
-                            co_await handle_dns_request(new_object);
+                            // handle dns cache
+                            status = co_await handle_query_cache(new_object);
+                            if (!status)
+                            {
+                                // handle dns request
+                                co_await handle_dns_request(new_object);
+                            }
                         }
+                    }
+                    catch (const std::exception &e)
+                    {
+                        logger.error("request_coroutine error: %s", e.what());
                     }
 
                     co_await object_pool_.release_object(new_object);
@@ -468,15 +475,8 @@ namespace dns
                                     dns_object->question_id_, dns_object->question_domain_.c_str(), dns_object->question_type_,
                                     dns_upstream->host().c_str(), dns_upstream->port());
 
-                        status = co_await dns_upstream->send_request(
+                        result = co_await dns_upstream->send_request(
                             dns_object->buffer_, dns_object->buffer_length_, handle_response);
-
-                        if (!status)
-                        {
-                            co_await dns_upstream->close();
-                        }
-
-                        result = status;
                     }
                     else
                     {
@@ -485,8 +485,7 @@ namespace dns
                 }
                 catch (const std::exception &e)
                 {
-                    logger.error("request error: %s at %s:%d", e.what(),
-                                 dns_upstream->host().c_str(), dns_upstream->port());
+                    logger.error("request error: %s", e.what());
                 }
 
                 if (!timeout_execute.timeout())
@@ -515,8 +514,7 @@ namespace dns
                 }
                 catch (const std::exception &e)
                 {
-                    logger.error("close error: %s at %s:%d", e.what(),
-                                 dns_upstream->host().c_str(), dns_upstream->port());
+                    logger.error("close error: %s", e.what());
                 }
 
                 if (!timeout_execute.timeout())
@@ -524,6 +522,62 @@ namespace dns
                     timer.cancel();
                 }
             });
+    }
+
+    asio::awaitable<bool> dns_gateway::dns_upstream_check(
+        std::shared_ptr<dns_upstream> dns_upstream, std::string domain)
+    {
+        dns_package package;
+        package.add_question(domain, dns::anwser_type::a);
+        int length = package.dump(check_buffer_, sizeof(check_buffer_));
+
+        // define a handle for response
+        auto handle_response =
+            [&](std::error_code ec, const char *data, uint16_t data_length) -> asio::awaitable<void>
+        {
+            if (ec)
+            {
+                logger.error("check error: %d message: %s", ec.value(), ec.message().c_str());
+            }
+
+            co_return;
+        };
+
+        bool request_status = false;
+        await_timeout_execute timeout_execute(executor_);
+        co_await timeout_execute.execute_until(
+            std::chrono::milliseconds(dns::coroutine_timeout),
+            [&](asio::steady_timer &timer) -> asio::awaitable<void>
+            {
+                try
+                {
+                    await_coroutine_lock lock(executor_, dns_upstream->locked_);
+                    co_await lock.get_lock();
+
+                    bool status = co_await dns_upstream->is_open();
+                    if (!status)
+                    {
+                        status = co_await dns_upstream->open();
+                    }
+
+                    if (status)
+                    {
+                        status = co_await dns_upstream->send_request(check_buffer_, length, handle_response);
+                        request_status = status;
+                    }
+                }
+                catch (const std::exception &e)
+                {
+                    logger.error("check error: %s", e.what());
+                }
+
+                if (!timeout_execute.timeout())
+                {
+                    timer.cancel();
+                }
+            });
+
+        co_return request_status;
     }
 
     asio::awaitable<void> dns_gateway::wait_terminated()
@@ -542,8 +596,8 @@ namespace dns
 
     asio::awaitable<int> dns_gateway::do_receive()
     {
-        memset(buffer_, 0, sizeof(buffer_));
-        co_return co_await udp_socket_.async_receive_from(asio::buffer(buffer_), remote_endpoint_, asio::use_awaitable);
+        memset(recv_buffer_, 0, sizeof(recv_buffer_));
+        co_return co_await udp_socket_.async_receive_from(asio::buffer(recv_buffer_), remote_endpoint_, asio::use_awaitable);
     }
 
     void dns_gateway::start_checker()
@@ -557,7 +611,6 @@ namespace dns
         auto handle_check = [&]() -> asio::awaitable<void>
         {
             int domain_index = 0;
-            char buffer[dns::buffer_size];
 
             checker_started_ = true;
             while (active_)
@@ -577,64 +630,8 @@ namespace dns
 
                             if (time_diff >= std::chrono::seconds(dns_upstream->check_interval()))
                             {
-                                dns_package package;
-                                package.add_question(domain, dns::anwser_type::a);
-                                int length = package.dump(buffer, sizeof(buffer));
-
-                                // define a handle for response
-                                auto handle_response =
-                                    [&](std::error_code ec, const char *data, uint16_t data_length) -> asio::awaitable<void>
-                                {
-                                    if (ec)
-                                    {
-                                        logger.error("check error: %d message: %s", ec.value(), ec.message().c_str());
-                                    }
-
-                                    co_return;
-                                };
-
-                                bool request_status = false;
-                                await_timeout_execute timeout_execute(executor_);
-                                co_await timeout_execute.execute_until(
-                                    std::chrono::milliseconds(dns::coroutine_timeout),
-                                    [&](asio::steady_timer &timer) -> asio::awaitable<void>
-                                    {
-                                        try
-                                        {
-                                            await_coroutine_lock lock(executor_, dns_upstream->locked_);
-                                            co_await lock.get_lock();
-
-                                            bool status = co_await dns_upstream->is_open();
-                                            if (!status)
-                                            {
-                                                status = co_await dns_upstream->open();
-                                            }
-
-                                            if (status)
-                                            {
-                                                status = co_await dns_upstream->send_request(buffer, length, handle_response);
-
-                                                if (!status)
-                                                {
-                                                    co_await dns_upstream->close();
-                                                }
-
-                                                request_status = status;
-                                            }
-                                        }
-                                        catch (const std::exception &e)
-                                        {
-                                            logger.error("check error: at %s:%d", e.what(),
-                                                         dns_upstream->host().c_str(), dns_upstream->port());
-                                        }
-
-                                        if (!timeout_execute.timeout())
-                                        {
-                                            timer.cancel();
-                                        }
-                                    });
-
-                                if (!request_status)
+                                bool status = co_await dns_upstream_check(dns_upstream, domain);
+                                if (!status)
                                 {
                                     co_await dns_upstream_close(dns_upstream);
                                 }
