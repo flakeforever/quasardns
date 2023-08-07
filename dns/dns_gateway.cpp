@@ -72,7 +72,10 @@ namespace dns
                 dns::dns_package package;
                 try
                 {
-                    package.parse(recv_buffer_, length);
+                    if (!package.parse(recv_buffer_, length))
+                    {
+                        continue;
+                    }
                 }
                 catch (const std::exception &e)
                 {
@@ -80,7 +83,7 @@ namespace dns
                     continue;
                 }
 
-                if (package.flag_qr() != 0 || package.que_count() == 0 || package.ans_count() > 0)
+                if (package.flag_qr() != 0 || package.que_count() == 0 || package.questions_.size() == 0)
                 {
                     continue;
                 }
@@ -207,7 +210,10 @@ namespace dns
         dns::dns_package package;
         try
         {
-            package.parse(dns_object->buffer_, dns_object->buffer_length_);
+            if (!package.parse(dns_object->buffer_, dns_object->buffer_length_))
+            {
+                co_return false;
+            }
         }
         catch (const std::exception &e)
         {
@@ -255,7 +261,10 @@ namespace dns
         dns::dns_package package;
         try
         {
-            package.parse(dns_object->buffer_, dns_object->buffer_length_);
+            if (!package.parse(dns_object->buffer_, dns_object->buffer_length_))
+            {
+                co_return false;
+            }
         }
         catch (const std::exception &e)
         {
@@ -310,6 +319,7 @@ namespace dns
                 }
                 catch (const std::exception &e)
                 {
+                    status = false;
                 }
 
                 if (status)
@@ -385,13 +395,10 @@ namespace dns
             try
             {
                 status = package.parse(dns_object->buffer_, dns_object->buffer_length_);
-                if (package.id() != dns_object->question_id_)
-                {
-                    package.output();
-                }
             }
             catch (const std::exception &e)
             {
+                status = false;
             }
 
             if (status)
@@ -628,6 +635,7 @@ namespace dns
                             std::chrono::milliseconds time_diff =
                                 std::chrono::duration_cast<std::chrono::seconds>(now - dns_upstream->last_request_time());
 
+                            logger.debug("dns_upstream->check_interval() %d %d", time_diff, dns_upstream->check_interval() * 1000);
                             if (time_diff >= std::chrono::seconds(dns_upstream->check_interval()))
                             {
                                 bool status = co_await dns_upstream_check(dns_upstream, domain);
@@ -644,8 +652,9 @@ namespace dns
                     logger.error("handle_check failed : %s", e.what());
                 }
 
-                asio::steady_timer timer(executor_, std::chrono::milliseconds(250));
-                co_await timer.async_wait(asio::as_tuple(asio::use_awaitable));
+                asio::steady_timer timer(executor_);
+                timer.expires_after(std::chrono::milliseconds(1000));
+                co_await timer.async_wait(asio::use_awaitable);
             }
 
             checker_started_ = false;

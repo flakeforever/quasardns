@@ -16,7 +16,7 @@
 namespace dns
 {
     dns_logger logger(log_level::debug);
-    
+
     dns_logger::dns_logger(log_level level)
     {
         level_ = level;
@@ -24,34 +24,46 @@ namespace dns
 
     void dns_logger::debug(const char *format, ...)
     {
-        va_list args;
-        va_start(args, format);
-        log(log_level::debug, format, args);
-        va_end(args);
+        if (log_level::debug >= level_)
+        {
+            va_list args;
+            va_start(args, format);
+            log(log_level::debug, format, args);
+            va_end(args);
+        }
     }
 
     void dns_logger::info(const char *format, ...)
     {
-        va_list args;
-        va_start(args, format);
-        log(log_level::info, format, args);
-        va_end(args);
+        if (log_level::info >= level_)
+        {
+            va_list args;
+            va_start(args, format);
+            log(log_level::info, format, args);
+            va_end(args);
+        }
     }
 
     void dns_logger::warning(const char *format, ...)
     {
-        va_list args;
-        va_start(args, format);
-        log(log_level::warning, format, args);
-        va_end(args);
+        if (log_level::warning >= level_)
+        {
+            va_list args;
+            va_start(args, format);
+            log(log_level::warning, format, args);
+            va_end(args);
+        }
     }
 
     void dns_logger::error(const char *format, ...)
     {
-        va_list args;
-        va_start(args, format);
-        log(log_level::error, format, args);
-        va_end(args);
+        if (log_level::error >= level_)
+        {
+            va_list args;
+            va_start(args, format);
+            log(log_level::error, format, args);
+            va_end(args);
+        }
     }
 
     void dns_logger::log(log_level msg_level, const char *format, va_list args)
