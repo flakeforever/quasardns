@@ -48,4 +48,4 @@ jobs:
       with:
         name: "dns-gateway_${version}.zip"
           path: |
-            ./gateway_-${version}/*
+            "dns-gateway_${version}.zip"
