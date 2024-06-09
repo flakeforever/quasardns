@@ -1,0 +1,25 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Checkout submodule
+      run: |
+        git submodule update --init
+
+    - name: Build
+      run: |
+        GOOS=linux GOARCH=arm64 go build -o dns-gateway
