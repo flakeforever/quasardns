@@ -40,12 +40,12 @@ jobs:
         cp build/dns-gateway package/
 
         version=$(git describe --tags --always)
-        timestamp=$(date +%Y%m%d%H%M%S)
-        package_filename="dns-gateway_${version}_${timestamp}.zip"
+        package_filename="dns-gateway_${version}.zip"
         zip -r $package_filename package
 
     - name: Upload package
       uses: actions/upload-artifact@v2
       with:
-        name: build-artifact
-        path: $package_filename
+        name: "dns-gateway_${version}.zip"
+          path: |
+            ./gateway_-${version}/*
