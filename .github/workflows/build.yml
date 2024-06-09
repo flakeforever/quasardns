@@ -31,3 +31,21 @@ jobs:
         cd build
         cmake -DCMAKE_TOOLCHAIN_FILE=../toolchain-arm64.cmake ..
         cmake --build .
+
+    - name: Package
+      run: |
+        mkdir package
+        cp ${{ github.workspace }}/lib/openssl/libssl.so package/
+        cp ${{ github.workspace }}/lib/openssl/libcrypto.so package/
+        cp -r build package/build
+
+        version=$(git describe --tags --always)
+        timestamp=$(date +%Y%m%d%H%M%S)
+        package_filename="dns-gateway_${{ matrix.target }}_${version}_${timestamp}.zip"
+        zip -r $package_filename package
+
+    - name: Upload package
+      uses: actions/upload-artifact@v2
+      with:
+        name: build-artifact
+        path: $package_filename
