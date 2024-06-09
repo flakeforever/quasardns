@@ -43,9 +43,9 @@ jobs:
         package_filename="dns-gateway_${version}.zip"
         zip -r $package_filename package
 
-    - name: Upload package
-      uses: actions/upload-artifact@v2
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
       with:
-        name: "dns-gateway_${version}.zip"
-          path: |
-            "dns-gateway_${version}.zip"
+        file: ./dns-gateway_${version}.zip*
+        tag: ${{ github.ref }}
+        file_glob: true
