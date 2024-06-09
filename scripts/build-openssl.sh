@@ -2,11 +2,6 @@
 
 cd lib/openssl
 
-export CC=aarch64-linux-gnu-gcc
-export CXX=aarch64-linux-gnu-g++
-export AR=aarch64-linux-gnu-ar
-export RANLIB=aarch64-linux-gnu-ranlib
-
 export PATH=/usr/bin:/usr/aarch64-linux-gnu:$PATH
 
 if [ "$1" = "shared" ]; then
