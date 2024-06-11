@@ -60,3 +60,7 @@ target_link_libraries(dns-gateway PRIVATE
 )
 
 set(CMAKE_BUILD_TYPE Release)
+
+install(TARGETS dns-gateway
+    RUNTIME DESTINATION usr/bin
+)
