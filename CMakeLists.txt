@@ -11,16 +11,6 @@
 cmake_minimum_required(VERSION 3.0)
 project(dns-gateway VERSION 1.0)
 
-# opessl build script
-add_custom_command(
-    OUTPUT build_openssl
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/build-openssl.sh shared
-#    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/build-openssl.sh no-shared
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-add_custom_target(openssl DEPENDS build_openssl)
-
 set(SOURCES
     lib/CxxUrl/url.cpp
 
@@ -60,24 +50,13 @@ add_executable(dns-gateway ${SOURCES} ${DNS_SOURCES} ${SOCKS_SOURCES})
 
 # include asio
 include_directories(lib/asio/asio/include)
-# include openssl
-include_directories(lib/openssl/include)
-# include dbslib
-include_directories(lib/dnslib/src)
-
-# depend openssl
-add_dependencies(dns-gateway openssl)
 
 target_compile_features(dns-gateway PRIVATE cxx_std_20)
 target_compile_options(dns-gateway PRIVATE -Wall -Wextra -Wno-unused-parameter)
 
-target_link_libraries(dns-gateway PRIVATE 
-# shared
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib/openssl/libssl.so
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib/openssl/libcrypto.so
-# no-shared
-#    ${CMAKE_CURRENT_SOURCE_DIR}/lib/openssl/libssl.a
-#    ${CMAKE_CURRENT_SOURCE_DIR}/lib/openssl/libcrypto.a
+target_link_libraries(dns-gateway PRIVATE
+    libssl.so
+    libcrypto.so
 )
 
 set(CMAKE_BUILD_TYPE Debug)
