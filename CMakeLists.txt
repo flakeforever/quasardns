@@ -59,4 +59,4 @@ target_link_libraries(dns-gateway PRIVATE
     libcrypto.so
 )
 
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
