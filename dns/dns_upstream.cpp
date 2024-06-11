@@ -259,6 +259,10 @@ namespace dns
 
         if (security_verify_)
         {
+            tls_context_->set_default_verify_paths();
+            tls_context_->set_options(ssl::context::default_workarounds);
+            // tls_context_->set_verify_mode(asio::ssl::verify_peer);
+
             if (ca_certificate_ != "")
             {
                 tls_context_->load_verify_file(ca_certificate_);
@@ -267,12 +271,10 @@ namespace dns
             {
                 tls_context_->load_verify_file("/etc/ssl/certs/ca-certificates.crt");
             }
-
-            tls_context_->set_verify_mode(SSL_VERIFY_PEER);
         }
         else
         {
-            tls_context_->set_verify_mode(SSL_VERIFY_NONE);
+            tls_context_->set_verify_mode(asio::ssl::verify_none);
         }
 
         if (certificate_ != "")
@@ -345,6 +347,7 @@ namespace dns
             std::string request_string = "";
             request_string += "POST " + path_ + " HTTP/1.1\r\n";
             request_string += "Host: " + host_ + "\r\n";
+            request_string += "User-Agent: dns-gateway\r\n";
             request_string += "Content-Type: application/dns-message\r\n";
 
             if (keep_alive_)
@@ -359,7 +362,7 @@ namespace dns
             request_string += "Content-Length: " + std::to_string(data_length) + "\r\n";
             request_string += "\r\n";
 
-            std::size_t request_length = request_string.length();
+            uint16_t request_length = (uint16_t)request_string.length();
             std::copy(request_string.begin(), request_string.end(), buffer_);
             std::copy(data, data + data_length, buffer_ + request_length);
             request_length += data_length;

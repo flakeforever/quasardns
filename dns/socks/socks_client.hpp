@@ -144,6 +144,8 @@ namespace socks
         asio::awaitable<bool> connect_socks5(asio::ip::tcp::socket &socket) override;
         
     private:
+        // bool verify_certificate(bool preverified, asio::ssl::verify_context& ctx);
+        
         asio::ssl::stream<asio::ip::tcp::socket> tls_socket_;
     };
 
